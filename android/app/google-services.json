@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "684363089659",
+    "project_id": "dutyhours-node",
+    "storage_bucket": "dutyhours-node.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:684363089659:android:aa1b9c90b10abe024dd25e",
+        "android_client_info": {
+          "package_name": "com.shiftmanagement.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB17FKPEH8_hs3c33s7PRDYfoDmMJuKq4g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
