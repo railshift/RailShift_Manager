@@ -50,7 +50,7 @@ class AuthService {
         final lastLogin = DateTime.parse(lastLoginStr);
         final daysSinceLogin = DateTime.now().difference(lastLogin).inDays;
         
-        if (daysSinceLogin < 2) { // Keep logged in for 2 days
+        if (daysSinceLogin < 1) { // Keep logged in for 1 day
           _tokens = AuthTokens(
             accessToken: accessToken,
             refreshToken: refreshToken,
@@ -62,7 +62,6 @@ class AuthService {
           _registerFCMToken();
           return;
         } else {
-          print('🔐 Auto-login expired after 2 days, clearing auth data');
           await _clearAuthData();
           return;
         }
@@ -90,20 +89,7 @@ class AuthService {
     required String password,
     UserRole role = UserRole.USER,
   }) async {
-    print('🚀 === REGISTRATION PROCESS STARTED ===');
-    print('📝 Attempting registration for: $email');
-    print('👤 Employee ID: $employeeId');
-    print('🏷️ Name: $name');
-    print('📧 Email: $email');
-    print('📱 Phone: ${phone ?? 'Not provided'}');
-    print('🏢 Division: ${division ?? 'Not provided'}');
-    print('💼 Designation: ${designation ?? 'Not provided'}');
-    print('🔐 Password: ${password.replaceAll(RegExp(r'.'), '*')} (${password.length} chars)');
-    print('👔 Role: ${role.toString().split('.').last}');
-    
     final url = Uri.parse('$_baseUrl/auth/register');
-    print('🌐 API URL: $url');
-    
     final requestBody = {
       'employeeId': employeeId,
       'name': name,
@@ -114,48 +100,25 @@ class AuthService {
       'password': password,
       'role': role.toString().split('.').last,
     };
-    
-    print('⏳ Sending request to server...');
-    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestBody),
       ).timeout(_loginTimeout);
-
-      print('📥 Registration response status: ${response.statusCode}');
-      print('📥 Registration response headers: ${response.headers}');
-
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 201 && responseData['success']) {
         final userData = responseData['data']['user'];
-        
-        print('✅ Registration successful for user: ${userData['name']}');
-        print('🎉 User ID: ${userData['id']}');
-        print('👔 User Role: ${userData['role']}');
-        print('📊 User Status: ${userData['status']} (New accounts start as INACTIVE)');
-        print('🏢 Division: ${userData['division'] ?? 'Not set'}');
-        print('💼 Designation: ${userData['designation'] ?? 'Not set'}');
-        
         // Registration returns user only (no tokens) — account is INACTIVE until approved
         _currentUser = User.fromJson(userData);
-        
-        print('🔐 === REGISTRATION PROCESS COMPLETED ===');
-        
         return responseData;
       } else {
-        print('❌ Registration failed with status: ${response.statusCode}');
-        print('❌ Error message: ${responseData['message']}');
         if (responseData['errors'] != null) {
-          print('❌ Validation errors: ${responseData['errors']}');
         }
         throw Exception(responseData['message'] ?? 'Registration failed');
       }
     } catch (e) {
-      print('💥 Registration error occurred: $e');
-      print('🚨 Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -212,7 +175,7 @@ class AuthService {
         );
         
 
-        await _saveAuthData(keepLoggedIn: true); // Keep user logged in for 2 days
+        await _saveAuthData(keepLoggedIn: true); // Keep user logged in for 1 day
         
         // Register FCM Token for push notifications
         await _registerFCMToken();
@@ -223,23 +186,14 @@ class AuthService {
         
         return responseData;
       } else {
-        print('❌ Login failed with status: ${response.statusCode}');
-        print('❌ Error message: ${responseData['message']}');
         throw Exception(responseData['message'] ?? 'Login failed');
       }
     } on TimeoutException catch (e) {
-      print('💥 Login timed out after ${_loginTimeout.inSeconds}s: $e');
-      print('🚨 Error type: ${e.runtimeType}');
       throw Exception('Login request timed out. Server may be waking up, please try again.');
     } on SocketException catch (e) {
-      print('💥 Login network/socket error: $e');
-      print('🚨 Error type: ${e.runtimeType}');
       throw Exception('Unable to connect to server. Check your internet connection and try again.');
     } on http.ClientException catch (e) {
       final message = e.message.toLowerCase();
-      print('💥 Login HTTP client error: $e');
-      print('🚨 Error type: ${e.runtimeType}');
-
       if (message.contains('failed host lookup') ||
           message.contains('socketexception') ||
           message.contains('connection')) {
@@ -248,8 +202,6 @@ class AuthService {
 
       throw Exception('Network error while logging in. Please try again.');
     } catch (e) {
-      print('💥 Login error occurred: $e');
-      print('🚨 Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -335,7 +287,6 @@ class AuthService {
       }
     } catch (e) {
       // Continue with logout even if API call fails
-      print('Logout API call failed: $e');
     }
 
     _currentUser = null;
@@ -359,11 +310,9 @@ class AuthService {
         if (response.statusCode == 200 || response.statusCode == 201) {
 
         } else {
-          print('⚠️ FCM token registration returned status ${response.statusCode}');
         }
       }
     } catch (e) {
-      print('⚠️ Failed to register FCM token with backend: $e');
     }
   }
 
@@ -371,15 +320,12 @@ class AuthService {
     try {
       if (_tokens?.accessToken != null) {
         final url = Uri.parse('$_baseUrl/fcm/unregister-token');
-        print('🗑️ Unregistering FCM token from backend...');
-        
         await http.delete(
           url,
           headers: getAuthHeaders(),
         );
       }
     } catch (e) {
-      print('⚠️ Failed to unregister FCM token: $e');
     }
   }
 
@@ -429,37 +375,28 @@ class AuthService {
       );
       
       if (response.statusCode == 401) {
-        print('🔑 Token expired, attempting refresh...');
         try {
           await refreshToken();
           return false; // Token refreshed successfully
         } catch (e) {
-          print('❌ Token refresh failed: $e');
           return true; // Token refresh failed
         }
       }
       
       return response.statusCode != 200;
     } catch (e) {
-      print('❌ Token validation error: $e');
       return true;
     }
   }
 
   // Force logout when token expires
   Future<void> handleTokenExpiration() async {
-    print('🚨 Token expired - attempting final refresh before logout');
-    
     // Try one more time to refresh the token before forcing logout
     try {
       await refreshToken();
-      print('✅ Last-chance token refresh successful');
       return; // Don't logout if refresh succeeded
     } catch (e) {
-      print('❌ Final token refresh failed: $e');
     }
-    
-    print('🚨 Forcing logout due to token expiration');
     await logout();
     NavigationService.showSessionExpiredDialog();
   }
@@ -526,45 +463,24 @@ class AuthService {
   Future<Map<String, dynamic>> forgotPassword({
     required String email,
   }) async {
-    print('🔐 === FORGOT PASSWORD PROCESS STARTED ===');
-    print('📧 Requesting password reset for: $email');
-    
     final url = Uri.parse('$_baseUrl/auth/forgot-password');
-    print('🌐 API URL: $url');
-    
     final requestBody = {
       'email': email,
     };
-    
-    print('📤 Forgot password request body: ${json.encode(requestBody)}');
-    print('⏳ Sending request to server...');
-    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestBody),
       ).timeout(const Duration(seconds: 30));
-
-      print('📥 Forgot password response status: ${response.statusCode}');
-      print('📥 Forgot password response body: ${response.body}');
-
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData['success']) {
-        print('✅ Password reset email sent successfully');
-        print('📧 Reset instructions sent to: $email');
-        print('🔐 === FORGOT PASSWORD PROCESS COMPLETED ===');
-        
         return responseData;
       } else {
-        print('❌ Forgot password failed with status: ${response.statusCode}');
-        print('❌ Error message: ${responseData['message']}');
         throw Exception(responseData['message'] ?? 'Failed to send password reset email');
       }
     } catch (e) {
-      print('💥 Forgot password error occurred: $e');
-      print('🚨 Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -575,11 +491,7 @@ class AuthService {
     required String otp,
     required String newPassword,
   }) async {
-    print('🔐 === RESET PASSWORD PROCESS STARTED ===');
-    
     final url = Uri.parse('$_baseUrl/auth/reset-password');
-    print('🌐 API URL: $url');
-    
     final requestBody = {
       'email': email,
       'otp': otp,
@@ -592,22 +504,14 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestBody),
       ).timeout(const Duration(seconds: 30));
-
-      print('📥 Reset password response status: ${response.statusCode}');
-      print('📥 Reset password response body: ${response.body}');
-
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData['success']) {
-        print('✅ Password reset successful');
-        print('🔐 === RESET PASSWORD PROCESS COMPLETED ===');
         return responseData;
       } else {
-        print('❌ Reset password failed with status: ${response.statusCode}');
         throw Exception(responseData['message'] ?? 'Failed to reset password');
       }
     } catch (e) {
-      print('💥 Reset password error occurred: $e');
       rethrow;
     }
   }
