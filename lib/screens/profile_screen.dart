@@ -4,6 +4,9 @@ import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
+import '../widgets/custom_text_field.dart';
+import '../utils/date_utils.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -513,30 +516,18 @@ Widget _buildProfileForm() {
               ],
             ),
             const SizedBox(height: 24),
-            _buildFormField(
+            CustomTextField(
               controller: _inchargeNameController,
               label: 'Full Name',
               icon: Icons.person_outline,
-              enabled: false, // API data - read only
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your name';
-                }
-                return null;
-              },
+              enabled: false,
             ),
             const SizedBox(height: 20),
-            _buildFormField(
+            CustomTextField(
               controller: _inchargeIdController,
               label: 'Employee ID',
               icon: Icons.badge_outlined,
-              enabled: false, // API data - read only
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your employee ID';
-                }
-                return null;
-              },
+              enabled: false,
             ),
             if (_currentUser?.email != null) ...[
               const SizedBox(height: 20),
@@ -570,12 +561,12 @@ Widget _buildProfileForm() {
               const SizedBox(height: 20),
               _buildInfoField(
                 label: 'Last Login',
-                value: _formatDateTime(_currentUser!.lastLogin!),
+                value: AppDateUtils.formatRelativeDateTime(_currentUser!.lastLogin!),
                 icon: Icons.access_time,
               ),
             ],
             const SizedBox(height: 20),
-            _buildFormField(
+            CustomTextField(
               controller: _sectionNameController,
               label: 'Section/Station',
               icon: Icons.location_on_outlined,
@@ -593,52 +584,7 @@ Widget _buildProfileForm() {
     );
   }
 
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool enabled,
-    String? Function(String?)? validator,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isDarkMode ? AppTheme.borderColor : AppTheme.lightBorderColor,
-        ),
-        color: enabled 
-            ? (_isDarkMode ? AppTheme.surfaceColor : Colors.white)
-            : (_isDarkMode ? AppTheme.surfaceColor.withOpacity(0.5) : Colors.grey.shade100),
-      ),
-      child: TextFormField(
-        controller: controller,
-        enabled: enabled,
-        style: Theme.of(context).textTheme.bodyLarge,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.accentOrange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: AppTheme.accentOrange,
-              size: 20,
-            ),
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          labelStyle: TextStyle(
-            color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-          ),
-        ),
-        validator: validator,
-      ),
-    );
-  }
+
 
   Widget _buildStatsCard() {
     return Container(
@@ -1097,23 +1043,7 @@ Widget _buildProfileForm() {
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inDays == 0) {
-      if (difference.inHours == 0) {
-        return '${difference.inMinutes} minutes ago';
-      }
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
-  }
+
 
   @override
   void dispose() {

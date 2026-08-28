@@ -7,6 +7,8 @@ import '../services/shift_service.dart';
 import '../services/dashboard_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
+import '../widgets/metric_card.dart';
+
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -383,140 +385,39 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       mainAxisSpacing: 14,
       childAspectRatio: 1.3,
       children: [
-        _buildMetricCard(
-          'Total Shifts',
-          '${_analyticsData['totalShifts']}',
-          Icons.train,
-          AppTheme.accentOrange,
-          'All time',
+        MetricCard(
+          title: 'Total Shifts',
+          value: '${_analyticsData['totalShifts']}',
+          icon: Icons.train,
+          color: AppTheme.accentOrange,
+          subtitle: 'All time',
+          isDarkMode: _isDarkMode,
         ),
-        _buildMetricCard(
-          'Active Shifts',
-          '${_analyticsData['activeShifts']}',
-          Icons.play_circle_filled,
-          AppTheme.successGreen,
-          'Currently running',
+        MetricCard(
+          title: 'Active Shifts',
+          value: '${_analyticsData['activeShifts']}',
+          icon: Icons.play_circle_filled,
+          color: AppTheme.successGreen,
+          subtitle: 'Currently running',
+          isDarkMode: _isDarkMode,
         ),
-        _buildMetricCard(
-          'Completed',
-          '${_analyticsData['completedShifts']}',
-          Icons.check_circle,
-          Colors.blue,
-          '${(_analyticsData['avgDurationHours'] as double? ?? 0.0).toStringAsFixed(1)}h avg',
+        MetricCard(
+          title: 'Completed',
+          value: '${_analyticsData['completedShifts']}',
+          icon: Icons.check_circle,
+          color: Colors.blue,
+          subtitle: '${(_analyticsData['avgDurationHours'] as double? ?? 0.0).toStringAsFixed(1)}h avg',
+          isDarkMode: _isDarkMode,
         ),
-        _buildMetricCard(
-          'Cancelled',
-          '${_analyticsData['cancelledShifts']}',
-          Icons.cancel,
-          AppTheme.errorRed,
-          'Needs attention',
+        MetricCard(
+          title: 'Cancelled',
+          value: '${_analyticsData['cancelledShifts']}',
+          icon: Icons.cancel,
+          color: AppTheme.errorRed,
+          subtitle: 'Needs attention',
+          isDarkMode: _isDarkMode,
         ),
       ],
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color, String subtitle) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isDarkMode ? [
-            AppTheme.cardBackground,
-            AppTheme.cardBackground.withOpacity(0.8),
-          ] : [
-            Colors.white,
-            color.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 18,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Icons.trending_up,
-                  color: color,
-                  size: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _isDarkMode ? AppTheme.textPrimary : AppTheme.lightTextPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Flexible(
-            child: Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                fontSize: 11,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

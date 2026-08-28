@@ -5,6 +5,10 @@ import '../models/user.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/custom_button.dart';
+
+
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -390,7 +394,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     return Column(
       children: [
         // Employee ID and Name Row
-        _buildStyledTextField(
+        CustomTextField(
           controller: _employeeIdController,
           label: 'Employee ID',
           icon: Icons.badge_outlined,
@@ -402,7 +406,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           },
         ),
         const SizedBox(height: 12),
-        _buildStyledTextField(
+        CustomTextField(
           controller: _nameController,
           label: 'Full Name',
           icon: Icons.person_outlined,
@@ -419,7 +423,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         const SizedBox(height: 12),
         
         // Email Field
-        _buildStyledTextField(
+        CustomTextField(
           controller: _emailController,
           label: 'Email Address',
           icon: Icons.email_outlined,
@@ -437,7 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         const SizedBox(height: 12),
         
         // Phone Field
-        _buildStyledTextField(
+        CustomTextField(
           controller: _phoneController,
           label: 'Phone (Optional)',
           icon: Icons.phone_outlined,
@@ -446,7 +450,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         const SizedBox(height: 12),
         
         // Division Field
-        _buildStyledTextField(
+        CustomTextField(
           controller: _divisionController,
           label: 'Division (Optional)',
           icon: Icons.business_outlined,
@@ -458,7 +462,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         const SizedBox(height: 12),
         
         // Designation Field
-        _buildStyledTextField(
+        CustomTextField(
           controller: _designationController,
           label: 'Designation (Optional)',
           icon: Icons.work_outline,
@@ -474,7 +478,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         const SizedBox(height: 12),
         
         // Password Fields
-        _buildStyledTextField(
+        CustomTextField(
           controller: _passwordController,
           label: 'Password',
           icon: Icons.lock_outlined,
@@ -503,7 +507,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         ),
         const SizedBox(height: 12),
         
-        _buildStyledTextField(
+        CustomTextField(
           controller: _confirmPasswordController,
           label: 'Confirm Password',
           icon: Icons.lock_outlined,
@@ -531,73 +535,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildStyledTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: isDarkMode 
-          ? Colors.white.withOpacity(0.05) 
-          : Colors.grey.shade50,
-        border: Border.all(
-          color: isDarkMode 
-            ? AppTheme.accentOrange.withOpacity(0.3) 
-            : AppTheme.accentOrange.withOpacity(0.2),
-          width: 1.5,
-        ),
-      ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : Colors.black87,
-          fontSize: 14,
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(
-            color: isDarkMode 
-              ? Colors.white.withOpacity(0.7) 
-              : Colors.black.withOpacity(0.6),
-            fontSize: 12,
-          ),
-          prefixIcon: Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.accentOrange.withOpacity(0.8),
-                  AppTheme.accentOrange,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-        validator: validator,
-      ),
     );
   }
 
@@ -677,69 +614,11 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   }
 
   Widget _buildRegisterButton() {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isLoading ? [
-            Colors.grey.shade400,
-            Colors.grey.shade500,
-          ] : [
-            AppTheme.accentOrange,
-            Colors.red.shade600,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: _isLoading ? [] : [
-          BoxShadow(
-            color: AppTheme.accentOrange.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _isLoading ? null : _register,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            alignment: Alignment.center,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.person_add_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Create Account',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
+    return CustomButton(
+      text: 'Create Account',
+      onPressed: _register,
+      isLoading: _isLoading,
+      icon: Icons.person_add_rounded,
     );
   }
 

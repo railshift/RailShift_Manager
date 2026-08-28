@@ -1465,7 +1465,7 @@ All protected endpoints require the Authorization header:
 >
 > Rate limiting is applied to prevent abuse
 >
-> Token expiry: Access token valid for 1 hour, Refresh token for 7 days
+> Token expiry: Access token valid for 1 hour, Refresh token for 1 day
 >
 > Pagination: Default page size is 10, max 100
 

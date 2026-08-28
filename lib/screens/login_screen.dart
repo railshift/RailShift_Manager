@@ -6,6 +6,10 @@ import '../services/biometric_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 import 'register_screen.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/custom_button.dart';
+
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -74,8 +78,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     final biometricService = BiometricService();
     final savedCreds = await _authService.getSavedCredentialsList();
     
-    // Only show biometric icon if they have saved credentials and it's enabled
-    if (savedCreds.isNotEmpty && await settingsService.getBiometricEnabled() && await biometricService.canCheckBiometrics()) {
+    // Show biometric icon if they have saved credentials and device supports biometrics
+    if (savedCreds.isNotEmpty && await biometricService.canCheckBiometrics()) {
       if (mounted) {
         setState(() {
           _isBiometricAvailable = true;
@@ -88,8 +92,43 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   Future<void> _triggerBiometricLogin() async {
-    final authenticated = await BiometricService().authenticate();
+    final settingsService = SettingsService();
+    final isEnabled = await settingsService.getBiometricEnabled();
+    
+    if (!isEnabled) {
+      final shouldEnable = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable Biometric Login'),
+          content: const Text('Biometric login is currently disabled. Would you like to authenticate to enable it?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentOrange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Enable & Login'),
+            ),
+          ],
+        ),
+      );
+      
+      if (shouldEnable != true) return;
+    }
+
+    final authenticated = await BiometricService().authenticate(
+      localizedReason: isEnabled ? 'Please authenticate to access DutyHours' : 'Authenticate to enable biometric login'
+    );
     if (authenticated && mounted) {
+      if (!isEnabled) {
+        await settingsService.setBiometricEnabled(true);
+      }
+      
       final savedCreds = await _authService.getSavedCredentialsList();
       if (savedCreds.isNotEmpty) {
         final firstCred = savedCreds.first;
@@ -746,145 +785,57 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       child: Column(
         children: [
           // Email Field
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: isDarkMode 
-                ? Colors.white.withOpacity(0.05) 
-                : Colors.grey.shade50,
-              border: Border.all(
-                color: isDarkMode 
-                  ? AppTheme.accentOrange.withOpacity(0.3) 
-                  : AppTheme.accentOrange.withOpacity(0.2),
-                width: 1.5,
-              ),
+        CustomTextField(
+          controller: _emailController,
+          label: 'Email Address',
+          icon: Icons.email_outlined,
+          keyboardType: TextInputType.emailAddress,
+          suffixIcon: IconButton(
+            onPressed: _showSavedCredentials,
+            icon: Icon(
+              Icons.person_outline,
+              color: AppTheme.accentOrange,
+              size: 20,
             ),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black87,
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                labelText: 'Email Address',
-                labelStyle: TextStyle(
-                  color: isDarkMode 
-                    ? Colors.white.withOpacity(0.7) 
-                    : Colors.black.withOpacity(0.6),
-                ),
-                prefixIcon: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.accentOrange.withOpacity(0.8),
-                        AppTheme.accentOrange,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    Icons.email_outlined,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-                suffixIcon: IconButton(
-                  onPressed: _showSavedCredentials,
-                  icon: Icon(
-                    Icons.person_outline,
-                    color: AppTheme.accentOrange,
-                    size: 20,
-                  ),
-                  tooltip: 'Saved Credentials',
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
+            tooltip: 'Saved Credentials',
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your email';
+            }
+            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              return 'Please enter a valid email';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Password Field
+        CustomTextField(
+          controller: _passwordController,
+          label: 'Password',
+          icon: Icons.lock_outlined,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() => _obscurePassword = !_obscurePassword);
+            },
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: isDarkMode
+                  ? Colors.white.withOpacity(0.7)
+                  : Colors.black.withOpacity(0.6),
             ),
           ),
-          const SizedBox(height: 16),
-          
-          // Password Field
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: isDarkMode 
-                ? Colors.white.withOpacity(0.05) 
-                : Colors.grey.shade50,
-              border: Border.all(
-                color: isDarkMode 
-                  ? AppTheme.accentOrange.withOpacity(0.3) 
-                  : AppTheme.accentOrange.withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
-            child: TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black87,
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                labelText: 'Password',
-                labelStyle: TextStyle(
-                  color: isDarkMode 
-                    ? Colors.white.withOpacity(0.7) 
-                    : Colors.black.withOpacity(0.6),
-                ),
-                prefixIcon: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.accentOrange.withOpacity(0.8),
-                        AppTheme.accentOrange,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    Icons.lock_outlined,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-                suffixIcon: IconButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    setState(() => _obscurePassword = !_obscurePassword);
-                  },
-                  icon: Icon(
-                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    color: isDarkMode 
-                      ? Colors.white.withOpacity(0.7) 
-                      : Colors.black.withOpacity(0.6),
-                  ),
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                return null;
-              },
-            ),
-          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your password';
+            }
+            return null;
+          },
+      ),
         ],
       ),
     );
@@ -1071,71 +1022,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   Widget _buildLoginButton() {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isLoading ? [
-            Colors.grey.shade400,
-            Colors.grey.shade500,
-          ] : [
-            AppTheme.accentOrange,
-            Colors.red.shade600,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: _isLoading ? [] : [
-          BoxShadow(
-            color: AppTheme.accentOrange.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _isLoading ? null : _login,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            alignment: Alignment.center,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.login_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Sign In',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
+    return CustomButton(
+      text: 'Sign In',
+      onPressed: _login,
+      isLoading: _isLoading,
+      icon: Icons.login_rounded,
     );
   }
+
 
   Widget _buildRegisterLink() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;

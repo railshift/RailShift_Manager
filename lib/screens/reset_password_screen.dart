@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/custom_button.dart';
+
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -23,11 +26,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -39,7 +42,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -47,7 +50,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       parent: _animationController,
       curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -55,7 +58,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       parent: _animationController,
       curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
     ));
-    
+
     _animationController.forward();
   }
 
@@ -84,46 +87,49 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
 
       if (mounted) {
         HapticFeedback.mediumImpact();
-        
+
         // Show success dialog
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                const SizedBox(width: 8),
-                const Text('Password Reset Successful'),
-              ],
-            ),
-            content: const Text(
-              'Your password has been successfully reset. You can now login with your new password.',
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentOrange,
-                  foregroundColor: Colors.white,
+          builder: (context) =>
+              AlertDialog(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 8),
+                    const Text('Password Reset Successful'),
+                  ],
                 ),
-                child: const Text('Go to Login'),
+                content: const Text(
+                  'Your password has been successfully reset. You can now login with your new password.',
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close dialog
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentOrange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
       }
     } catch (e) {
       if (mounted) {
         HapticFeedback.heavyImpact();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -135,7 +141,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
             ),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -149,8 +156,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+    final isDarkMode = Theme
+        .of(context)
+        .brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -177,12 +186,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 40),
-                        
+
                         // Back button
                         IconButton(
                           onPressed: () => Navigator.pop(context),
@@ -191,19 +201,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
                             color: isDarkMode ? Colors.white : Colors.black87,
                           ),
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Header
                         _buildHeader(),
-                        
+
                         const SizedBox(height: 40),
-                        
+
                         // Reset form
                         _buildResetForm(),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Reset button
                         _buildResetButton(),
                       ],
@@ -219,8 +229,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
   }
 
   Widget _buildHeader() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+    final isDarkMode = Theme
+        .of(context)
+        .brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,13 +271,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
 
   Widget _buildResetForm() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Form(
       key: _formKey,
       child: Column(
         children: [
           // New Password Field
-          _buildStyledTextField(
+          CustomTextField(
             controller: _passwordController,
             label: 'New Password',
             icon: Icons.lock_outlined,
@@ -277,9 +289,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
               },
               icon: Icon(
                 _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: isDarkMode 
-                  ? Colors.white.withOpacity(0.7) 
-                  : Colors.black.withOpacity(0.6),
+                color: isDarkMode
+                    ? Colors.white.withOpacity(0.7)
+                    : Colors.black.withOpacity(0.6),
               ),
             ),
             validator: (value) {
@@ -293,9 +305,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
             },
           ),
           const SizedBox(height: 16),
-          
+
           // Confirm Password Field
-          _buildStyledTextField(
+          CustomTextField(
             controller: _confirmPasswordController,
             label: 'Confirm New Password',
             icon: Icons.lock_outlined,
@@ -307,9 +319,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
               },
               icon: Icon(
                 _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: isDarkMode 
-                  ? Colors.white.withOpacity(0.7) 
-                  : Colors.black.withOpacity(0.6),
+                color: isDarkMode
+                    ? Colors.white.withOpacity(0.7)
+                    : Colors.black.withOpacity(0.6),
               ),
             ),
             validator: (value) {
@@ -327,123 +339,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
     );
   }
 
-  Widget _buildStyledTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        validator: validator,
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : Colors.black87,
-          fontSize: 16,
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(
-            icon,
-            color: isDarkMode 
-              ? Colors.white.withOpacity(0.7) 
-              : Colors.black.withOpacity(0.6),
-          ),
-          suffixIcon: suffixIcon,
-          filled: true,
-          fillColor: isDarkMode 
-            ? AppTheme.cardBackground 
-            : Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: isDarkMode 
-                ? Colors.white.withOpacity(0.1) 
-                : Colors.black.withOpacity(0.1),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: AppTheme.accentOrange,
-              width: 2,
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: AppTheme.errorRed,
-              width: 2,
-            ),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: AppTheme.errorRed,
-              width: 2,
-            ),
-          ),
-          labelStyle: TextStyle(
-            color: isDarkMode 
-              ? Colors.white.withOpacity(0.7) 
-              : Colors.black.withOpacity(0.6),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildResetButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isLoading ? null : _resetPassword,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.accentOrange,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 8,
-          shadowColor: AppTheme.accentOrange.withOpacity(0.3),
-        ),
-        child: _isLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : const Text(
-              'Reset Password',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-      ),
+    return CustomButton(
+      text: 'Reset Password',
+      onPressed: _resetPassword,
+      isLoading: _isLoading,
     );
   }
 }

@@ -6,8 +6,9 @@ import '../services/database_service.dart';
 import '../services/shift_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
-import 'duty_detail_screen.dart';
 import 'alert_management_screen.dart';
+import '../widgets/duty_card.dart';
+import '../utils/data_parser.dart';
 
 class DutiesScreen extends StatefulWidget {
   const DutiesScreen({super.key});
@@ -78,24 +79,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
     }
   }
 
-  // Helper method to safely convert values to double
-  double _safeDoubleValue(dynamic value) {
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
-  }
 
-  // Helper method to safely convert values to bool
-  bool? _safeBoolValue(dynamic value) {
-    if (value is bool) return value;
-    if (value is String) {
-      if (value.toLowerCase() == 'true') return true;
-      if (value.toLowerCase() == 'false') return false;
-    }
-    if (value is int) return value != 0;
-    return null;
-  }
 
   DutyAssignment _convertActiveShiftToDuty(Map<String, dynamic> shiftData) {
     // Safely extract trainManager
@@ -121,7 +105,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
       fromStation: 'Active',
       toStation: 'In Progress',
       status: ShiftStatus.IN_PROGRESS,
-      notes: 'Current duty hours: ${_safeDoubleValue(shiftData['currentDutyHours']).toStringAsFixed(1)}h',
+      notes: 'Current duty hours: ${DataParser.safeDoubleValue(shiftData['currentDutyHours']).toStringAsFixed(1)}h',
       createdAt: DateTime.parse(shiftData['signOnDateTime'] ?? shiftData['signOnTime'] ?? DateTime.now().toIso8601String()),
       createdBy: 'system',
     );
@@ -311,7 +295,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
         signOnStation: shiftData['signOnStation']?.toString() ?? 'Unknown',
         section: shiftData['section']?.toString() ?? shiftData['signOnStation']?.toString() ?? 'Unknown',
         dutyType: shiftData['dutyType']?.toString(),
-        lobbySignOn: _safeBoolValue(shiftData['lobbySignOn']),
+        lobbySignOn: DataParser.safeBoolValue(shiftData['lobbySignOn']),
         trainArrivalDate: shiftData['trainArrivalDate'] != null 
             ? DateTime.tryParse(shiftData['trainArrivalDate'].toString()) 
             : null,
@@ -839,7 +823,12 @@ class _DutiesScreenState extends State<DutiesScreen> {
           }
           
           final duty = _filteredDuties[index];
-          return _buildDutyCard(duty);
+          return DutyCard(
+            duty: duty,
+            crewMembers: _crewMembers,
+            isDarkMode: _isDarkMode,
+            onRefresh: _loadData,
+          );
         },
       ),
     );
@@ -879,438 +868,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
     );
   }
 
-  Widget _buildDutyCard(DutyAssignment duty) {
-    // Try to get crew info from API data first, then fallback to local data
-    final shiftData = _getShiftDataById(duty.backendShiftId ?? duty.id);
-    
-    // Use the crew info from the duty assignment model first, then fallback to API data
-    final guard = duty.trainManager != null 
-        ? {
-            'name': duty.trainManager!.name,
-            'employeeId': duty.trainManager!.employeeId,
-            'id': duty.trainManager!.employeeId,
-          }
-        : _getCrewMemberInfo(duty.guardId, shiftData?['trainManager']);
-        
-    final pilot = duty.locoPilot != null 
-        ? {
-            'name': duty.locoPilot!.name,
-            'employeeId': duty.locoPilot!.employeeId,
-            'id': duty.locoPilot!.employeeId,
-          }
-        : _getCrewMemberInfo(duty.locoPilotId, shiftData?['locoPilot']);
-    final assistant = duty.assistantId != null 
-        ? _crewMembers.where((c) => c.id == duty.assistantId).firstOrNull 
-        : null;
-    
-    final duration = duty.duration;
-    final durationColor = AppTheme.getDurationColor(duration);
-    final statusColor = AppTheme.getStatusColor(duty.status.displayName);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DutyDetailScreen(
-              duty: duty,
-              crewMembers: _crewMembers,
-            ),
-          ),
-        ).then((result) {
-          // Refresh data if duty was ended
-          if (result == true) {
-            _loadData();
-          }
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isDarkMode ? [
-            AppTheme.cardBackground,
-            AppTheme.cardBackground.withOpacity(0.9),
-          ] : [
-            Colors.white,
-            Colors.grey.shade50,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: _isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: statusColor.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.accentOrange,
-                        AppTheme.accentOrange.withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.accentOrange.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.train_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Train ${duty.trainNumber}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 16,
-                            color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              duty.section ?? '${duty.fromStation} → ${duty.toStation}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: statusColor.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        duty.status.displayName,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            durationColor,
-                            durationColor.withOpacity(0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${duration.inHours}h ${duration.inMinutes % 60}m',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Crew Information
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isDarkMode ? AppTheme.surfaceColor.withOpacity(0.5) : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildCrewInfo(
-                          'Train Manager',
-                          guard?['name'] ?? 'Unknown',
-                          guard?['employeeId'] ?? 'N/A',
-                          Icons.security_rounded,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: _isDarkMode ? AppTheme.borderColor : AppTheme.lightBorderColor,
-                      ),
-                      Expanded(
-                        child: _buildCrewInfo(
-                          'Loco Pilot',
-                          pilot?['name'] ?? 'Unknown',
-                          pilot?['employeeId'] ?? 'N/A',
-                          Icons.person_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (assistant != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 1,
-                      color: _isDarkMode ? AppTheme.borderColor : AppTheme.lightBorderColor,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildCrewInfo(
-                      'Assistant',
-                      assistant?.name ?? 'Unknown',
-                      assistant?.employeeId ?? 'N/A',
-                      Icons.person_outline_rounded,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Time Information
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 16,
-                      color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Started: ${_formatTime(duty.startTime)}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                if (duty.endTime != null)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.flag_rounded,
-                        size: 16,
-                        color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Ended: ${_formatTime(duty.endTime!)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            
-            if (duty.notes != null && duty.notes!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.accentOrange.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.note_rounded,
-                      size: 16,
-                      color: AppTheme.accentOrange,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        duty.notes!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _isDarkMode ? AppTheme.textPrimary : AppTheme.lightTextPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      ),
-    );
-
-  }
-
-  Widget _buildCrewInfo(String role, String name, String id, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.accentOrange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: AppTheme.accentOrange,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            role,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-              fontWeight: FontWeight.w500,
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            id,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: _isDarkMode ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  Map<String, dynamic>? _getShiftDataById(String dutyId) {
-    // Safely extract shifts data
-    List<dynamic> shifts = [];
-    try {
-      if (_shiftsData is Map<String, dynamic>) {
-        final shiftsData = _shiftsData['shifts'];
-        if (shiftsData is List) {
-          shifts = shiftsData;
-        }
-      } else if (_shiftsData is List) {
-        shifts = _shiftsData as List;
-      }
-    } catch (e) {
-      // Return null if extraction fails
-    }
-    try {
-      final matchingShift = shifts.where((shift) => shift is Map<String, dynamic> && shift['id'] == dutyId).firstOrNull;
-      return matchingShift as Map<String, dynamic>?;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Map<String, dynamic>? _getCrewMemberInfo(String? crewId, Map<String, dynamic>? apiCrewData) {
-    // First try to get from API data
-    if (apiCrewData != null) {
-      return {
-        'name': apiCrewData['name'] ?? 'Unknown',
-        'employeeId': apiCrewData['employeeId'] ?? 'N/A',
-        'id': apiCrewData['id'] ?? crewId,
-      };
-    }
-    
-    // Fallback to local crew data
-    if (crewId != null) {
-      final localCrew = _crewMembers.where((c) => c.id == crewId).firstOrNull;
-      if (localCrew != null) {
-        return {
-          'name': localCrew.name,
-          'employeeId': localCrew.employeeId,
-          'id': localCrew.id,
-        };
-      }
-    }
-    
-    return null;
-  }
 
   @override
   void dispose() {

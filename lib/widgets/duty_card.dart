@@ -43,18 +43,25 @@ class DutyCard extends StatelessWidget {
             homeBase: 'Unknown',
             status: CrewStatus.onDuty,
           )
-        : CrewMember(
-            id: 'pilot_unknown',
-            name: 'Loco Pilot',
-            employeeId: 'unknown',
-            role: CrewRole.locoPilot,
-            phoneNumber: '',
-            homeBase: 'Unknown',
-            status: CrewStatus.onDuty,
-          );
+        : (crewMembers.where((c) => c.id == duty.locoPilotId).isNotEmpty
+            ? crewMembers.firstWhere((c) => c.id == duty.locoPilotId)
+            : CrewMember(
+                id: duty.locoPilotId ?? 'unknown_pilot',
+                name: 'Loco Pilot',
+                employeeId: duty.locoPilotId ?? 'unknown',
+                role: CrewRole.locoPilot,
+                phoneNumber: '',
+                homeBase: 'Unknown',
+                status: CrewStatus.onDuty,
+              ));
+
+    final assistant = duty.assistantId != null && crewMembers.where((c) => c.id == duty.assistantId).isNotEmpty
+        ? crewMembers.firstWhere((c) => c.id == duty.assistantId)
+        : null;
 
     final duration = duty.duration;
     final durationColor = AppTheme.getDurationColor(duration);
+    final statusColor = AppTheme.getStatusColor(duty.status.displayName);
 
     return GestureDetector(
       onTap: () {
@@ -85,8 +92,8 @@ class DutyCard extends StatelessWidget {
                     AppTheme.cardBackground.withOpacity(0.9),
                   ]
                 : [
-                    Colors.green.shade50,
-                    Colors.green.shade100,
+                    Colors.white,
+                    Colors.grey.shade50,
                   ],
           ),
           borderRadius: BorderRadius.circular(16),
@@ -98,9 +105,7 @@ class DutyCard extends StatelessWidget {
             ),
           ],
           border: Border.all(
-            color: isDarkMode
-                ? Colors.green.shade600.withOpacity(0.4)
-                : Colors.green.shade300.withOpacity(0.5),
+            color: statusColor.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -174,35 +179,55 @@ class DutyCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          durationColor,
-                          durationColor.withOpacity(0.8),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: durationColor.withOpacity(0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      '${duration.inHours}h ${duration.inMinutes % 60}m',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          duty.status.displayName,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              durationColor,
+                              durationColor.withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${duration.inHours}h ${duration.inMinutes % 60}m',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -238,6 +263,21 @@ class DutyCard extends StatelessWidget {
                         isDarkMode: isDarkMode,
                       ),
                     ),
+                    if (assistant != null) ...[
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: isDarkMode ? AppTheme.borderColor : AppTheme.lightBorderColor,
+                      ),
+                      Expanded(
+                        child: CrewInfoTile(
+                          role: 'Assistant',
+                          name: assistant.name,
+                          icon: Icons.person_outline_rounded,
+                          isDarkMode: isDarkMode,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -258,7 +298,9 @@ class DutyCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Started: ${duty.startTime.hour.toString().padLeft(2, '0')}:${duty.startTime.minute.toString().padLeft(2, '0')}',
+                            duty.endTime == null
+                                ? 'Started: ${duty.startTime.hour.toString().padLeft(2, '0')}:${duty.startTime.minute.toString().padLeft(2, '0')}'
+                                : 'Started: ${duty.startTime.hour.toString().padLeft(2, '0')}:${duty.startTime.minute.toString().padLeft(2, '0')}  •  Ended: ${duty.endTime!.hour.toString().padLeft(2, '0')}:${duty.endTime!.minute.toString().padLeft(2, '0')}',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: isDarkMode
                                       ? AppTheme.textSecondary
@@ -271,29 +313,42 @@ class DutyCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.successGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.successGreen.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      duty.status.toString().split('.').last,
-                      style: const TextStyle(
-                        color: AppTheme.successGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
                 ],
               ),
+              if (duty.notes != null && duty.notes!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.accentOrange.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.note_rounded,
+                        size: 16,
+                        color: AppTheme.accentOrange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          duty.notes!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: isDarkMode ? AppTheme.textPrimary : AppTheme.lightTextPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

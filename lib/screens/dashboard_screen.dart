@@ -16,12 +16,10 @@ import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'duties_screen.dart';
 import 'reports_screen.dart';
-import 'crew_management_screen.dart';
-import 'duty_detail_screen.dart';
+import '../utils/data_parser.dart';
 import 'duty_dialog.dart';
 import 'help_support_screen.dart';
 import 'user_management_screen.dart';
-import 'login_screen.dart';
 import 'alert_management_screen.dart';
 import '../widgets/duty_card.dart';
 import '../widgets/search_bar.dart';
@@ -188,9 +186,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       toStation: shiftData['signOffStation'] ?? 'In Progress',
       signOnStation: shiftData['signOnStation'],
       signOffStation: shiftData['signOffStation'],
-      dutyHours: _safeDoubleValue(shiftData['dutyHours']),
+      dutyHours: DataParser.safeDoubleValue(shiftData['dutyHours']),
       status: _parseShiftStatus(shiftData['status']),
-      notes: 'Current duty hours: ${_safeDoubleValue(shiftData['dutyHours']).toStringAsFixed(1)}h',
+      notes: 'Current duty hours: ${DataParser.safeDoubleValue(shiftData['dutyHours']).toStringAsFixed(1)}h',
       createdAt: DateTime.parse(shiftData['createdAt'] ?? DateTime.now().toIso8601String()),
       createdBy: 'system',
       backendShiftId: shiftData['id'], // Store the backend shift ID
@@ -205,14 +203,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         phone: trainManager['phone'] ?? '',
       ) : null,
     );
-  }
-
-  double _safeDoubleValue(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
   }
 
   ShiftStatus _parseShiftStatus(String? status) {
@@ -230,79 +220,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       default:
         return ShiftStatus.IN_PROGRESS;
     }
-  }
-
-  Future<void> _performQuickSearch(String query) async {
-    if (query.isEmpty) return;
-    
-    final results = await _dbService.quickSearch(query);
-    if (mounted) {
-      _showSearchResults(results);
-    }
-  }
-
-  void _showSearchResults(List<Map<String, dynamic>> results) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.cardBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.search, color: AppTheme.accentOrange),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Search Results (${results.length})',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: results.length,
-                itemBuilder: (context, index) {
-                  final result = results[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppTheme.accentOrange,
-                      child: Icon(
-                        result['type'] == 'crew' ? Icons.person : Icons.train,
-                        color: Colors.white,
-                      ),
-                    ),
-                    title: Text(result['title']),
-                    subtitle: Text(result['subtitle']),
-                    onTap: () {
-                      Navigator.pop(context);
-                      // TODO: Navigate to detail screen
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -379,54 +296,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-    );
-  }
-
-  Widget _buildSectionHeader() {
-    return Card(
-      child: Padding(
-        padding: AppTheme.cardPadding,
-        child: Row(
-          children: [
-            const CircleAvatar(
-              backgroundColor: AppTheme.accentOrange,
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _sectionInfo['sectionName'] ?? 'Section',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Text(
-                    'Incharge: ${_sectionInfo['inchargeName']} (${_sectionInfo['inchargeId']})',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppTheme.successGreen,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                'ONLINE',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -2069,12 +1938,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
 
-  String _formatDate(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}';
-  }
 
 }
