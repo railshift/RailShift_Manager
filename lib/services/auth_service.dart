@@ -50,7 +50,7 @@ class AuthService {
         final lastLogin = DateTime.parse(lastLoginStr);
         final daysSinceLogin = DateTime.now().difference(lastLogin).inDays;
         
-        if (daysSinceLogin < 1) { // Keep logged in for 1 day
+        if (daysSinceLogin < 2) { // Keep logged in for 2 days
           _tokens = AuthTokens(
             accessToken: accessToken,
             refreshToken: refreshToken,
@@ -62,7 +62,7 @@ class AuthService {
           _registerFCMToken();
           return;
         } else {
-          print('🔐 Auto-login expired after 1 day, clearing auth data');
+          print('🔐 Auto-login expired after 2 days, clearing auth data');
           await _clearAuthData();
           return;
         }
@@ -212,7 +212,7 @@ class AuthService {
         );
         
 
-        await _saveAuthData(keepLoggedIn: true); // Keep user logged in for 1 day
+        await _saveAuthData(keepLoggedIn: true); // Keep user logged in for 2 days
         
         // Register FCM Token for push notifications
         await _registerFCMToken();
