@@ -1,44 +1,25 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_theme.dart';
+import 'package:upgrader/upgrader.dart';
 
 class UpdateService {
-  static const String _updateUrl = 'https://raw.githubusercontent.com/railshift/app-updates/main/version.json';
   static const String _skippedVersionKey = 'skipped_update_version_date';
 
   Future<void> checkForUpdates(BuildContext context) async {
     try {
-      // 1. Fetch remote version info
-      final response = await http.get(Uri.parse(_updateUrl));
-      if (response.statusCode != 200) {
-        return;
-      }
-
-      // Sanitize newlines only inside JSON string values (not the structural whitespace)
-      final sanitizedBody = response.body.replaceAllMapped(
-        RegExp(r'"((?:[^"\\]|\\.)*)"', dotAll: true),
-        (match) => '"${match.group(1)!
-            .replaceAll('\r\n', '\\n')
-            .replaceAll('\n', '\\n')
-            .replaceAll('\r', '\\n')
-            .replaceAll('\t', '\\t')}"',
+      // Initialize Upgrader (which checks the Play Store / App Store)
+      final upgrader = Upgrader(
+        debugDisplayAlways: true, // Set to true to test the dialog UI locally
+        durationUntilAlertAgain: const Duration(days: 1),
       );
-      final data = json.decode(sanitizedBody);
-      final String latestVersion = data['latest_version'];
-      final String updateUrl = data['update_url'];
-      final String releaseNotes = data['release_notes'] ?? 'A new version of DutyHours is available.';
-
-      // 2. Get local app version
-      final packageInfo = await PackageInfo.fromPlatform();
-      final String currentVersion = packageInfo.version;
-
-      // 3. Compare versions
-      if (_isRemoteGreater(latestVersion, currentVersion)) {
-        // 4. Check if user already skipped this today
+      
+      await upgrader.initialize();
+      
+      if (upgrader.isUpdateAvailable()) {
+        final String latestVersion = upgrader.currentAppStoreVersion ?? 'new';
+        final String releaseNotes = upgrader.releaseNotes ?? 'A new version of DutyHours is available on the store.';
+        
+        // Check if user already skipped this today
         final prefs = await SharedPreferences.getInstance();
         final skippedData = prefs.getString(_skippedVersionKey);
         
@@ -47,33 +28,17 @@ class UpdateService {
 
         if (skippedData != currentData) {
           if (context.mounted) {
-            _showUpdateDialog(context, latestVersion, releaseNotes, updateUrl, currentData);
+            _showUpdateDialog(context, latestVersion, releaseNotes, upgrader, currentData);
           }
         }
       }
-    } catch (_) {
-      // Silently fail if offline or error occurs
-    }
-  }
-
-  bool _isRemoteGreater(String remote, String local) {
-    try {
-      List<int> remoteParts = remote.split('.').map(int.parse).toList();
-      List<int> localParts = local.split('.').map(int.parse).toList();
-      
-      for (int i = 0; i < 3; i++) {
-        int r = i < remoteParts.length ? remoteParts[i] : 0;
-        int l = i < localParts.length ? localParts[i] : 0;
-        if (r > l) return true;
-        if (r < l) return false;
-      }
-      return false;
     } catch (e) {
-      return false;
+      // Silently fail if offline or error occurs
+      debugPrint('Update check failed: $e');
     }
   }
 
-  void _showUpdateDialog(BuildContext context, String latestVersion, String releaseNotes, String updateUrl, String currentData) {
+  void _showUpdateDialog(BuildContext context, String latestVersion, String releaseNotes, Upgrader upgrader, String currentData) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
@@ -90,7 +55,7 @@ class UpdateService {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDarkMode ? 0.6 : 0.25),
+                color: Colors.black.withValues(alpha: isDarkMode ? 0.6 : 0.25),
                 blurRadius: 30,
                 spreadRadius: 2,
                 offset: const Offset(0, 12),
@@ -185,11 +150,8 @@ class UpdateService {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () async {
-                              final url = Uri.parse(updateUrl);
-                              if (await canLaunchUrl(url)) {
-                                await launchUrl(url, mode: LaunchMode.externalApplication);
-                              }
+                            onPressed: () {
+                              upgrader.sendUserToAppStore();
                             },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
